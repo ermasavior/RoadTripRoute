@@ -5,11 +5,8 @@ import com.lynden.gmapsfx.MapComponentInitializedListener;
 import com.lynden.gmapsfx.javascript.object.GoogleMap;
 import com.lynden.gmapsfx.javascript.object.LatLong;
 import com.lynden.gmapsfx.javascript.object.MapOptions;
-import com.lynden.gmapsfx.javascript.object.Marker;
-import com.lynden.gmapsfx.javascript.object.MarkerOptions;
+import java.util.Scanner;
 import javafx.geometry.Insets;
-import java.io.File;
-
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.scene.Scene;
@@ -24,65 +21,81 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-
+/**
+ * @author ERMA SAFIRA NURMASYITA 13516072
+ * @author NUHA ADINATHA 13516120
+ * main program
+ */
 public class RoadTripRoute extends Application implements MapComponentInitializedListener {
-
     GoogleMapView mapView;
     GoogleMap map;
     GraphMap mapGraph;
+    static String intersectionFile;
+    int startPoint;
+    int stopPoint;
     
     private static final int MARGIN_VAL = 10;
-
+    
+    //inisialisasi Jendela Google Maps
     @Override
     public void start(Stage stage) throws Exception {
         //Create the JavaFX component and set this as a listener so we know when 
         //the map has been initialized, at which point we can then begin manipulating it.
         mapView = new GoogleMapView();
         mapView.addMapInializedListener(this);
-    
+        
         BorderPane bp = new BorderPane();
         // create components for fetch tab
-        Button displayButton = new Button("Show Map");
-        TextField tf = new TextField();
-        ComboBox<File> cb = new ComboBox<File>();
+        Button displayButton = new Button("Display Map");
+        ComboBox<String> cb = new ComboBox();
+        cb = setComboBox(cb);
+        
         VBox fetchBox = getFetchBox(displayButton, cb);
-    
-        Button resetButton = new Button("Reset");
+        cb.setValue(intersectionFile);
         Button visualizeButton = new Button("Visualize Route");
-    
+        TextField textStart = new TextField();
+        TextField textStop = new TextField();
         Label startLabel = new Label("   No Chosen Point");
         Label stopLabel = new Label("   No Chosen Point");
         startLabel.setMinWidth(180);
         stopLabel.setMinWidth(180);
         Button startButton = new Button("Start");
         Button stopButton = new Button("Stop");
-    
         Label routeDistLabel = new Label("No route distance yet.");
-    
+        
         Tab routeTab = new Tab("Routing");
         setupRouteTab(routeTab, fetchBox, routeDistLabel,
                       startLabel, stopLabel, 
-                      resetButton, visualizeButton, startButton,
-                      stopButton);
-    
+                      visualizeButton, startButton,
+                      stopButton, textStart, textStop);
+        
         TabPane tp = new TabPane(routeTab);
         tp.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        
-        /*mapView.addMapReadyListener(() -> {
-            GeneralService gs = new GeneralService(mapView, manager, markerManager);
-            RouteService rs = new RouteService(mapView, manager, markerManager);
-            //System.out.println("in map ready : " + this.getClass());
-            // initialize controllers
-            new RouteController(rs, routeButton,
-		resetButton, startButton, stopButtons, 
-		group, searchOptions, visualizationButton,
-		startLabel, stopLabel,
-		manager, markerManager);
-        });*/
+        //BUTTON AND MAP LISTENER
+        mapView.addMapReadyListener(() -> {
+            displayButton.setOnAction( e -> {
+                System.out.println(intersectionFile);
+                mapGraph = new GraphMap(mapView, map, intersectionFile+".txt");
+
+                mapGraph.DisplayIntersections(intersectionFile);
+                startButton.setOnAction( f -> {
+                    startPoint = Integer.parseInt(textStart.getText());
+                    startLabel.setText("    Node "+textStart.getText());
+                    stopButton.setOnAction( g -> {
+                        stopPoint = Integer.parseInt(textStop.getText());
+                        System.out.println("dsu>>"+stopPoint);
+                        stopLabel.setText("    Node "+textStop.getText());
+                        visualizeButton.setDisable(false);
+                        visualizeButton.setOnAction( h -> {
+                            routeDistLabel.setText(Double.toString(mapGraph.DisplayRoute(0, 8)));
+                        });
+                    });
+                });
+            });
+        });
         
         bp.setLeft(tp);
         bp.setCenter(mapView);
-    
         Scene scene = new Scene(bp);
         stage.setTitle("Road Trip Route");
         stage.setScene(scene);
@@ -90,6 +103,7 @@ public class RoadTripRoute extends Application implements MapComponentInitialize
     }
 
     @Override
+    //Inisialisasi Peta
     public void mapInitialized() {
         //Set the initial properties of the map.
         MapOptions mapOptions = new MapOptions();
@@ -102,33 +116,18 @@ public class RoadTripRoute extends Application implements MapComponentInitialize
                 .zoomControl(false)
                 .zoom(15);
         map = mapView.createMap(mapOptions);
-
-        //Add a marker to the map
-        /*MarkerOptions markerOptions = new MarkerOptions();
-
-        markerOptions.position( new LatLong(-6.891943, 107.610395) )
-                    .visible(Boolean.TRUE)
-                    .title("My Marker");
-        
-        Marker marker = new Marker( markerOptions );
-
-        map.addMarker(marker);*/
-
     }
 
     /**
     * Setup layout of route tab and controls
-    *
+    * DEKORASI TAB
     * @param routeTab
     * @param box
     */
     private void setupRouteTab(Tab routeTab, VBox fetchBox,
-                             Label routeDistLabel,
-                             Label startLabel, 
-                             Label stopLabel, 
-		  	     Button resetButton, Button vButton, 
-		  	     Button startButton, Button stopButton) {
-
+                             Label routeDistLabel,Label startLabel, 
+                             Label stopLabel, Button vButton, 
+		  	     Button startButton, Button stopButton, TextField textStart, TextField textStop) {
         //set up tab layout
         HBox h = new HBox();
       
@@ -141,11 +140,13 @@ public class RoadTripRoute extends Application implements MapComponentInitialize
         selectLeft.getChildren().add(startLabel);
         
         HBox startBox = new HBox();
+        startBox.getChildren().add(textStart);
         startBox.getChildren().add(startButton);
         startBox.getChildren().add(startLabel);
         startBox.setSpacing(2);
 
         HBox stopBox = new HBox();
+        stopBox.getChildren().add(textStop);
         stopBox.getChildren().add(stopButton);
         stopBox.getChildren().add(stopLabel);
         stopBox.setSpacing(2);
@@ -169,15 +170,16 @@ public class RoadTripRoute extends Application implements MapComponentInitialize
       
         v.getChildren().add(vButton);
         VBox.setMargin(vButton, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL*8));
-        VBox.setMargin(resetButton, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
         vButton.setDisable(true);
         v.getChildren().add(routeInfoBox);
-        v.getChildren().add(resetButton);
       
         routeTab.setContent(h);
     }
     
-    private VBox getFetchBox(Button displayButton, ComboBox<File> cb) {
+    /**
+     * Edit ComboBox
+     */
+    private VBox getFetchBox(Button displayButton, ComboBox<String> cb) {
         // add button to tab, rethink design and add V/HBox for content
   	VBox v = new VBox();
         HBox h = new HBox();
@@ -194,7 +196,19 @@ public class RoadTripRoute extends Application implements MapComponentInitialize
         return v;
     }
     
+    //Combo Box
+    public ComboBox<String> setComboBox(ComboBox<String> cb) {
+        cb.getItems().addAll(
+            "ITB",
+            "AlunAlun"
+        );
+        return cb;
+    }
+    
     public static void main(String[] args) {
+        //file name
+        Scanner sc = new Scanner(System.in);
+        intersectionFile = sc.nextLine();
         launch(args);
     }
 }
