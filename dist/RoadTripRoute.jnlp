@@ -8,7 +8,7 @@
   </information>
   <resources>
     <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
-    <jar href="RoadTripRoute.jar" size="4028" download="eager" />
+    <jar href="RoadTripRoute.jar" size="4098" download="eager" />
     <jar href="lib\GMapsFX-2.10.0.jar" size="154471" download="eager" />
     <jar href="lib\google-maps-services-0.2.6.jar" size="174196" download="eager" />
   </resources>

@@ -7,6 +7,9 @@ import com.lynden.gmapsfx.javascript.object.LatLong;
 import com.lynden.gmapsfx.javascript.object.MapOptions;
 import com.lynden.gmapsfx.javascript.object.Marker;
 import com.lynden.gmapsfx.javascript.object.MarkerOptions;
+import javafx.geometry.Insets;
+import java.io.File;
+
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.scene.Scene;
@@ -24,169 +27,174 @@ import javafx.stage.Stage;
 
 public class RoadTripRoute extends Application implements MapComponentInitializedListener {
 
-GoogleMapView mapView;
-GoogleMap map;
-
-@Override
-public void start(Stage stage) throws Exception {
-
-    //Create the JavaFX component and set this as a listener so we know when 
-    //the map has been initialized, at which point we can then begin manipulating it.
-    mapView = new GoogleMapView();
-    mapView.addMapInializedListener(this);
+    GoogleMapView mapView;
+    GoogleMap map;
+    GraphMap mapGraph;
     
-    BorderPane bp = new BorderPane();
+    private static final int MARGIN_VAL = 10;
+
+    @Override
+    public void start(Stage stage) throws Exception {
+        //Create the JavaFX component and set this as a listener so we know when 
+        //the map has been initialized, at which point we can then begin manipulating it.
+        mapView = new GoogleMapView();
+        mapView.addMapInializedListener(this);
     
-    // create components for fetch tab
-    Button fetchButton = new Button("Fetch Data");
-    Button displayButton = new Button("Show Intersections");
-    TextField tf = new TextField();
-    ComboBox cb = new ComboBox();
+        BorderPane bp = new BorderPane();
+        // create components for fetch tab
+        Button displayButton = new Button("Show Map");
+        TextField tf = new TextField();
+        ComboBox<File> cb = new ComboBox<File>();
+        VBox fetchBox = getFetchBox(displayButton, cb);
     
-    //HBox fetchControls = getBottomBox(tf, fetchButton);
-    VBox fetchBox = new VBox();//getFetchBox(displayButton, cb);
+        Button resetButton = new Button("Reset");
+        Button visualizeButton = new Button("Visualize Route");
     
-    // create components for fetch tab
-    Button routeButton = new Button("Show Route");
-    Button hideRouteButton = new Button("Hide Route");
-    Button resetButton = new Button("Reset");
-    Button visualizationButton = new Button("Start Visualization");
+        Label startLabel = new Label("   No Chosen Point");
+        Label stopLabel = new Label("   No Chosen Point");
+        startLabel.setMinWidth(180);
+        stopLabel.setMinWidth(180);
+        Button startButton = new Button("Start");
+        Button stopButton = new Button("Stop");
     
-    Label startLabel = new Label("Empty.");
-    Label stopLabel = new Label("Empty.");
-    startLabel.setMinWidth(180);
-    stopLabel.setMinWidth(180);
-    Button startButton = new Button("Start");
-    Button stopButton = new Button("Stop");
+        Label routeDistLabel = new Label("No route distance yet.");
     
-    Label routeDistLabel = new Label("No route distance yet.");
+        Tab routeTab = new Tab("Routing");
+        setupRouteTab(routeTab, fetchBox, routeDistLabel,
+                      startLabel, stopLabel, 
+                      resetButton, visualizeButton, startButton,
+                      stopButton);
     
-    Tab routeTab = new Tab("Routing");
-    setupRouteTab(routeTab, fetchBox, routeDistLabel,
-    			  startLabel, stopLabel, 
-    			  routeButton, /*hideRouteButton,*/
-        		  resetButton, routeButton, startButton, 
-        		  stopButton);
+        TabPane tp = new TabPane(routeTab);
+        tp.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        
+        /*mapView.addMapReadyListener(() -> {
+            GeneralService gs = new GeneralService(mapView, manager, markerManager);
+            RouteService rs = new RouteService(mapView, manager, markerManager);
+            //System.out.println("in map ready : " + this.getClass());
+            // initialize controllers
+            new RouteController(rs, routeButton,
+		resetButton, startButton, stopButtons, 
+		group, searchOptions, visualizationButton,
+		startLabel, stopLabel,
+		manager, markerManager);
+        });*/
+        
+        bp.setLeft(tp);
+        bp.setCenter(mapView);
     
-    
-    TabPane tp = new TabPane(routeTab);
-    tp.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        Scene scene = new Scene(bp);
+        stage.setTitle("Road Trip Route");
+        stage.setScene(scene);
+        stage.show();
+    }
 
-    
-    bp.setLeft(tp);
-    bp.setCenter(mapView);
-    
-    Scene scene = new Scene(bp);
-    stage.setTitle("Road Trip Route");
-    stage.setScene(scene);
-    stage.show();
-}
+    @Override
+    public void mapInitialized() {
+        //Set the initial properties of the map.
+        MapOptions mapOptions = new MapOptions();
 
+        mapOptions.center(new LatLong(-6.891943, 107.610395))
+                .overviewMapControl(false)
+                .panControl(true)
+                .rotateControl(false)
+                .streetViewControl(false)
+                .zoomControl(false)
+                .zoom(15);
+        map = mapView.createMap(mapOptions);
 
-@Override
-public void mapInitialized() {
-    //Set the initial properties of the map.
-    MapOptions mapOptions = new MapOptions();
+        //Add a marker to the map
+        /*MarkerOptions markerOptions = new MarkerOptions();
 
-    mapOptions.center(new LatLong(-6.891943, 107.610395))
-            .overviewMapControl(false)
-            .panControl(true)
-            .rotateControl(false)
-            .streetViewControl(false)
-            .zoomControl(false)
-            .zoom(15);
+        markerOptions.position( new LatLong(-6.891943, 107.610395) )
+                    .visible(Boolean.TRUE)
+                    .title("My Marker");
+        
+        Marker marker = new Marker( markerOptions );
 
-    map = mapView.createMap(mapOptions);
+        map.addMarker(marker);*/
 
-    //Add a marker to the map
-    MarkerOptions markerOptions = new MarkerOptions();
+    }
 
-    markerOptions.position( new LatLong(-6.891943, 107.610395) )
-                .visible(Boolean.TRUE)
-                .title("My Marker");
-
-    Marker marker = new Marker( markerOptions );
-
-    map.addMarker(marker);
-
-}
-
-/**
-   * Setup layout of route tab and controls
-   *
-   * @param routeTab
-   * @param box
-   */
-  private void setupRouteTab(Tab routeTab, VBox fetchBox,
+    /**
+    * Setup layout of route tab and controls
+    *
+    * @param routeTab
+    * @param box
+    */
+    private void setupRouteTab(Tab routeTab, VBox fetchBox,
                              Label routeDistLabel,
                              Label startLabel, 
                              Label stopLabel, 
-		  	     Button showButton, /*Button hideButton, */
 		  	     Button resetButton, Button vButton, 
 		  	     Button startButton, Button stopButton) {
 
-      //set up tab layout
-      HBox h = new HBox();
+        //set up tab layout
+        HBox h = new HBox();
       
-      // v is inner container
-      VBox v = new VBox();
-      h.getChildren().add(v);
+        // v is inner container
+        VBox v = new VBox();
+        h.getChildren().add(v);
 
-      VBox selectLeft = new VBox();
+        VBox selectLeft = new VBox();
 
-      selectLeft.getChildren().add(startLabel);
-      HBox startBox = new HBox();
-      startBox.getChildren().add(startLabel);
-      startBox.getChildren().add(startButton);
-      startBox.setSpacing(20);
+        selectLeft.getChildren().add(startLabel);
+        
+        HBox startBox = new HBox();
+        startBox.getChildren().add(startButton);
+        startBox.getChildren().add(startLabel);
+        startBox.setSpacing(2);
 
-      VBox stopBoxes = new VBox();
-      HBox stopBox = new HBox();
-      stopBox.getChildren().add(stopLabel);
-      stopBoxes.getChildren().add(stopBox);
-
-      VBox markerBox = new VBox();
-      Label markerLabel = new Label("Selected Marker: ");
-      markerBox.getChildren().add(markerLabel);
-      //markerBox.getChildren().add(pointLabel);
+        HBox stopBox = new HBox();
+        stopBox.getChildren().add(stopButton);
+        stopBox.getChildren().add(stopLabel);
+        stopBox.setSpacing(2);
       
-      VBox routeInfoBox = new VBox();
-      Label routeInfoLabel = new Label("Route Info: ");
-      routeInfoBox.getChildren().add(routeInfoLabel);
-      /*routeInfoBox.getChildren().add(routeDistLabel);
-      routeInfoBox.getChildren().add(routeTimeLabel);
+        VBox routeInfoBox = new VBox();
+        Label routeInfoLabel = new Label("Route Info: ");
+        routeInfoBox.getChildren().add(routeInfoLabel);
+        routeInfoBox.getChildren().add(routeDistLabel);
       
-      VBox.setMargin(routeInfoLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      /*VBox.setMargin(routeDistLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      VBox.setMargin(routeTimeLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      VBox.setMargin(markerLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      VBox.setMargin(pointLabel, new Insets(0,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      VBox.setMargin(fetchBox, new Insets(0,0,MARGIN_VAL*2,0));
+        VBox.setMargin(routeInfoLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
+        VBox.setMargin(routeDistLabel, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
+        VBox.setMargin(fetchBox, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL*2,MARGIN_VAL*2));
+        VBox.setMargin(startBox, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
+        VBox.setMargin(stopBox, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
 
-      HBox showHideBox = new HBox();
-      showHideBox.getChildren().add(showButton);
-      showHideBox.getChildren().add(hideButton);
-      showHideBox.setSpacing(2*MARGIN_VAL);*/
-
-      //v.getChildren().add(fetchBox);
-      v.getChildren().add(new Label("Start Position: "));
-      v.getChildren().add(startBox);
-      v.getChildren().add(new Label("Stops: "));
-      v.getChildren().add(stopBoxes);
-      //v.getChildren().add(showHideBox);
+        v.getChildren().add(fetchBox);
+        v.getChildren().add(new Label("   Start Position: "));
+        v.getChildren().add(startBox);
+        v.getChildren().add(new Label("   Destination: "));
+        v.getChildren().add(stopBox);
       
-      v.getChildren().add(vButton);
-      //VBox.setMargin(showHideBox, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      //VBox.setMargin(vButton, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
-      vButton.setDisable(true);
-      v.getChildren().add(markerBox);
-      v.getChildren().add(routeInfoBox);
-      //v.getChildren().add(resetButton);
+        v.getChildren().add(vButton);
+        VBox.setMargin(vButton, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL*8));
+        VBox.setMargin(resetButton, new Insets(MARGIN_VAL,MARGIN_VAL,MARGIN_VAL,MARGIN_VAL));
+        vButton.setDisable(true);
+        v.getChildren().add(routeInfoBox);
+        v.getChildren().add(resetButton);
       
-      routeTab.setContent(h);
-  }
+        routeTab.setContent(h);
+    }
+    
+    private VBox getFetchBox(Button displayButton, ComboBox<File> cb) {
+        // add button to tab, rethink design and add V/HBox for content
+  	VBox v = new VBox();
+        HBox h = new HBox();
 
-public static void main(String[] args) {
-    launch(args);
-}
+        HBox intersectionControls = new HBox();
+        cb.setPrefWidth(100);
+        intersectionControls.getChildren().add(cb);
+        displayButton.setPrefWidth(100);
+        intersectionControls.getChildren().add(displayButton);
+
+        h.getChildren().add(v);
+        v.getChildren().add(new Label("  Choose map file: "));
+        v.getChildren().add(intersectionControls);
+        return v;
+    }
+    
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
